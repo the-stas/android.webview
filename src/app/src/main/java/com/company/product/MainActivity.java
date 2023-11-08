@@ -1,13 +1,21 @@
 package com.company.product;
 
+import static android.app.PendingIntent.getActivity;
+
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
+import android.util.Log;
 import android.os.Bundle;
 import android.webkit.DownloadListener;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -16,12 +24,15 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
 
     // if your website starts with www, exclude it
-    private static final String myWebSite = "example.com";
+    private static final String myWebSite = "the-stas.github.io/bar-code/test-bar-code-3.html";
 
     WebView webView;
     ProgressDialog progressDialog;
@@ -29,12 +40,20 @@ public class MainActivity extends AppCompatActivity {
     // for handling file upload, set a static value, any number you like
     // this value will be used by WebChromeClient during file upload
     private static final int file_chooser_activity_code = 1;
+    private static final int CAMERA = 1;
+    private static final int RECORD_AUDIO = 2;
+    private static final int MODIFY_AUDIO_SETTINGS = 3;
     private static ValueCallback<Uri[]> mUploadMessageArr;
 
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //checkAndRequestPermission(Manifest.permission.MODIFY_AUDIO_SETTINGS, MODIFY_AUDIO_SETTINGS);
+        //checkAndRequestPermission(Manifest.permission.RECORD_AUDIO, RECORD_AUDIO);
+        //checkAndRequestPermission(Manifest.permission.CAMERA, CAMERA);
 
         // initialize the progressDialog
         progressDialog = new ProgressDialog(MainActivity.this);
@@ -57,15 +76,51 @@ public class MainActivity extends AppCompatActivity {
         // some other settings
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowFileAccessFromFileURLs(true);
+        //settings.setAllowFileAccess(true);
+        //settings.setAllowFileAccessFromFileURLs(true);
         settings.setUserAgentString(new WebView(this).getSettings().getUserAgentString());
+        webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
 
         // set the download listener
-        webView.setDownloadListener(downloadListener);
+        //webView.setDownloadListener(downloadListener);
 
         // load the website
         webView.loadUrl("https://" + myWebSite);
+        Log.d("webView","page loaded");
+        webView.setWebChromeClient(new WebChromeClient(){
+            @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                request.grant(request.getResources());
+            }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        switch (requestCode) {
+            case CAMERA: {
+                // If the user granted the permission, do something here.
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // ...
+                } else {
+                    // If the user denied the permission, do something here.
+                }
+                break;
+            }
+        }
+    }
+
+    private void checkAndRequestPermission(String permission, int permissionId) {
+        // Check whether the user has granted the WRITE_EXTERNAL_STORAGE permission.
+        int hasCameraPermission = ContextCompat.checkSelfPermission(this, permission);
+
+        // If the user has not granted the permission, request it.
+        if (hasCameraPermission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{permission}, permissionId);
+        }
     }
 
     // after the file chosen handled, variables are returned back to MainActivity
